@@ -1,0 +1,128 @@
+ private boolean isSolvable;
+
+    private Queue<Board> pathSolve = new Queue<Board>();
+    private int moves = 0;
+
+    public Solver(Board initial)           // find a solution to the initial board (using the A* algorithm)
+    {
+        MinPQ<Map.Entry<Board, Integer>> boards, boardsTwin;
+        Map.Entry<Board, Integer> searchBoard, searchBoardTwin;
+        Board lastBoard, lastBoardTwin;
+        boolean isSolve = false;
+
+        if (initial == null) throw new NullPointerException();
+
+        boards = new MinPQ<Map.Entry<Board, Integer>>(new Comparator<Map.Entry<Board, Integer>>() {
+            @Override
+            public int compare(Map.Entry<Board, Integer> o1, Map.Entry<Board, Integer> o2) {
+                if (o1 == null && o2 == null) return 0;
+                if (o1 == null) return 1;
+                if (o2 == null) return -1;
+
+                return (o1.getKey().manhattan() + o1.getValue()) - (o2.getKey().manhattan() + o2.getValue());
+            }
+        });
+
+        boardsTwin = new MinPQ<Map.Entry<Board, Integer>>(new Comparator<Map.Entry<Board, Integer>>() {
+            @Override
+            public int compare(Map.Entry<Board, Integer> o1, Map.Entry<Board, Integer> o2) {
+                if (o1 == null && o2 == null) return 0;
+                if (o1 == null) return 1;
+                if (o2 == null) return -1;
+
+                return (o1.getKey().manhattan() + o1.getValue()) - (o2.getKey().manhattan() + o2.getValue());
+            }
+        });
+
+        boards.insert(new SimpleEntry(initial, 0));
+        searchBoard = boards.min();
+
+        boardsTwin.insert(new SimpleEntry(initial.twin(), 0));
+        searchBoardTwin = boardsTwin.min();
+
+
+        while (!isSolve) {
+            //check initial board
+            lastBoard = searchBoard.getKey();
+            searchBoard = boards.delMin();
+            pathSolve.enqueue(searchBoard.getKey());
+
+            //while (!boards.isEmpty()) boards.delMin();
+
+            for (Board board : searchBoard.getKey().neighbors()) {
+                if (!board.equals(lastBoard)) boards.insert(new SimpleEntry(board, searchBoard.getValue() + 1));
+            }
+
+            for (Map.Entry<Board, Integer> board : boards) {
+                if (board.getKey().isGoal()) {
+                    isSolve = true;
+                    pathSolve.enqueue(board.getKey());
+                    isSolvable = true;
+                    moves = board.getValue();
+                    break;
+                }
+            }
+            //System.out.println(searchBoard);
+            //moves++;
+            /***********************************************************************************/
+            //check initial.twin
+            lastBoardTwin = searchBoardTwin.getKey();
+            searchBoardTwin = boardsTwin.delMin();
+
+            for (Board board : searchBoardTwin.getKey().neighbors()) {
+                if (!board.equals(lastBoardTwin))
+                    boardsTwin.insert(new SimpleEntry(board, searchBoardTwin.getValue() + 1));
+            }
+
+            for (Map.Entry<Board, Integer> board : boardsTwin) {
+                if (board.getKey().isGoal()) {
+                    isSolve = true;
+                    isSolvable = false;
+                    break;
+                }
+            }
+
+        }
+    }
+
+    public boolean isSolvable()            // is the initial board solvable?
+    {
+        return isSolvable;
+    }
+
+    public int moves()                     // min number of moves to solve initial board; -1 if unsolvable
+    {
+        if (!isSolvable) return -1;
+        return moves;
+    }
+
+    public Iterable<Board> solution()      // sequence of boards in a shortest solution; null if unsolvable
+    {
+        if (!isSolvable) return null;
+        return pathSolve;
+    }
+
+    public static void main(String[] args) // solve a slider puzzle (given below)
+    {
+        // create initial board from file
+        String filename = "D:\\JAVA\\algoritms\\Puzzle\\8puzzle\\puzzle11.txt";
+        In in = new In(filename);
+        int N = in.readInt();
+        int[][] blocks = new int[N][N];
+        for (int i = 0; i < N; i++)
+            for (int j = 0; j < N; j++)
+                blocks[i][j] = in.readInt();
+        Board initial = new Board(blocks);
+
+        // solve the puzzle
+        Solver solver = new Solver(initial);
+
+        // print solution to standard output
+        if (!solver.isSolvable())
+            StdOut.println("No solution possible");
+        else {
+            StdOut.println("Minimum number of moves = " + solver.moves());
+            for (Board board : solver.solution())
+                StdOut.println(board);
+        }
+    }
